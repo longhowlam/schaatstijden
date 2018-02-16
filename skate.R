@@ -45,14 +45,15 @@ skater_data = skater_data %>%
     tijd_sec
   )
   
-#### some insights ####
+#### Some insights ####################################################
+
 skater_data %>% filter(Distance == "1000m", tijd_sec< 300) %>%
 ggplot(aes(tijd_sec)) + geom_histogram(col="black") + facet_wrap(~gender)
 
 skater_data %>% filter(Distance == "10000m", tijd_sec < 1500) %>%
   ggplot(aes(tijd_sec)) + geom_histogram(col="black") + facet_wrap(~gender)
 
-## 10 KM met Sven
+#### 10 KM met Sven ####
 P = skater_data %>% 
   filter(Distance == "10000m", tijd_sec > 750, tijd_sec< 2000, gender == "M") %>%
   ggplot(aes(Age, tijd_sec)) + geom_point(alpha = 0.1) + 
@@ -71,4 +72,61 @@ P +
   geom_smooth(data = sven , aes(Age, tijd_sec), col="Red", size=3)
 
 
-skater_data2 %>% group_by(gender) %>% summarise(n=n()) %>% arrange(desc(n))
+skater_data %>% group_by(gender) %>% summarise(n=n()) %>% arrange(desc(n))
+
+
+###### Per land ################################################################
+
+N=4
+Top = skater_data %>%
+  group_by(country) %>% 
+  summarise(n=n()) %>%
+  arrange(desc(n)) %>%
+  slice(1:N)
+
+skater_data %>% inner_join(Top) %>%
+  filter(Distance == "10000m", tijd_sec > 750, tijd_sec< 2000, gender == "M") %>%
+  ggplot(aes(Age, tijd_sec)) + geom_point(alpha = 0.1) + 
+  geom_smooth() +
+  facet_wrap(~country)
+
+skater_data %>% inner_join(Top) %>%
+  filter(
+    Distance == "10000m",
+    tijd_sec > 750,
+    tijd_sec< 2000, gender == "M",
+    Age < 40
+    ) %>%
+  ggplot(aes(Age, tijd_sec)) + geom_point(alpha = 0.1) + 
+  geom_smooth(aes(col=country) ,se=FALSE, size=3)
+
+
+##########  events landen ####################################################
+tmp = skater_data %>% 
+  group_by(event) %>% 
+  summarise(
+    n = n(),
+    ncountry = n_distinct(country)
+    ) 
+hist(tmp$ncountry, nclass = 100)
+
+
+skater_data2 = skater_data %>% 
+  left_join(tmp) %>%
+  mutate(
+    NLanden = cut(ncountry,breaks=mb)
+  )
+
+mb = unique(quantile(skater_data2$ncountry, probs=0.2*(0:5)))
+
+
+pp = skater_data2 %>% 
+  filter(Distance == "10000m", tijd_sec > 750, tijd_sec< 2000, gender == "M") %>%
+  ggplot(aes(Age, tijd_sec)) + geom_point(alpha = 0.1) + 
+  geom_smooth() +
+  scale_x_continuous(breaks = 10*(1:7)) +
+  scale_y_continuous(breaks = 60*(11:20), limits = c(750,1200)) +
+  facet_wrap(~NLanden ,ncol=3)
+pp
+table(skater_data2$NLanden)
+hist(skater_data2$ncountry)
